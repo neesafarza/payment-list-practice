@@ -113,4 +113,14 @@ describe("PaymentsPage search and clear", () => {
     await waitForRows(6);
     expect(queryClearButton()).not.toBeInTheDocument();
   });
+
+  test("Clear Filters moves focus to the search input", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getInput(), { target: { value: "pay_134_1" } });
+    fireEvent.click(queryClearButton()!);
+
+    expect(getInput()).toHaveFocus();
+  });
 });
