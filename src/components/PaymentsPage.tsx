@@ -13,9 +13,12 @@ export const PaymentsPage = () => {
   // searchInput is what is typed; appliedSearch is what was last submitted.
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  // Currency applies as soon as it is selected; there is no draft value.
+  const [currency, setCurrency] = useState("");
 
   const query = usePayments({
     search: appliedSearch || undefined,
+    currency: currency || undefined,
     page: PAGE,
     pageSize: PAGE_SIZE,
   });
@@ -34,9 +37,10 @@ export const PaymentsPage = () => {
   const handleClear = () => {
     setSearchInput("");
     setAppliedSearch("");
+    setCurrency("");
   };
 
-  const hasActiveFilter = searchInput !== "" || appliedSearch !== "";
+  const hasActiveFilter = searchInput !== "" || appliedSearch !== "" || currency !== "";
 
   return (
     <Container>
@@ -44,6 +48,8 @@ export const PaymentsPage = () => {
       <SearchBar
         value={searchInput}
         onChange={setSearchInput}
+        currency={currency}
+        onCurrencyChange={setCurrency}
         onSubmit={handleSearch}
         onClear={handleClear}
         showClear={hasActiveFilter}

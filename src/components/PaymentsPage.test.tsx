@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import { http, HttpResponse } from "msw";
 import { PaymentsPage } from "./PaymentsPage";
-import { API_URL } from "../constants";
+import { API_URL, CURRENCIES } from "../constants";
 import { I18N } from "../constants/i18n";
 import { server } from "../mocks/node";
 
@@ -180,5 +180,95 @@ describe("PaymentsPage search and clear", () => {
     fireEvent.click(queryClearButton()!);
 
     expect(getInput()).toHaveFocus();
+  });
+});
+
+const getCurrencySelect = () =>
+  screen.getByRole("combobox", { name: I18N.CURRENCY_FILTER_LABEL });
+
+// Currency is the fifth column of each data row.
+const getCurrencyColumn = () =>
+  screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => row.querySelectorAll("td")[4]?.textContent);
+
+const waitForOnlyCurrency = (currency: string, rows: number) =>
+  waitFor(() => {
+    const column = getCurrencyColumn();
+    expect(column).toHaveLength(rows);
+    expect(column.every((value) => value === currency)).toBe(true);
+  });
+
+describe("PaymentsPage currency filter", () => {
+  test("lists an all-currencies option followed by every currency", () => {
+    renderPage();
+
+    const options = Array.from(getCurrencySelect().querySelectorAll("option"));
+    expect(options.map((option) => option.value)).toEqual(["", ...CURRENCIES]);
+    expect(options[0]).toHaveTextContent(I18N.CURRENCIES_OPTION);
+    expect(getCurrencySelect()).toHaveValue("");
+  });
+
+  test("filters by currency as soon as one is selected", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getCurrencySelect(), { target: { value: "USD" } });
+
+    await waitForOnlyCurrency("USD", 5);
+  });
+
+  test("combines the applied search with the selected currency", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getInput(), { target: { value: "pay_134" } });
+    fireEvent.click(getSearchButton());
+    await waitForRows(6);
+
+    fireEvent.change(getCurrencySelect(), { target: { value: "USD" } });
+
+    await waitForOnlyCurrency("USD", 1);
+    expect(screen.getByText("pay_134_1")).toBeInTheDocument();
+  });
+
+  test("does not apply unsubmitted search text when the currency changes", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getInput(), { target: { value: "pay_134" } });
+    fireEvent.change(getCurrencySelect(), { target: { value: "USD" } });
+
+    await waitForOnlyCurrency("USD", 5);
+  });
+
+  test("shows Clear Filters when only a currency is selected, and clearing resets it", async () => {
+    renderPage();
+    await waitForRows(6);
+    expect(queryClearButton()).not.toBeInTheDocument();
+
+    fireEvent.change(getCurrencySelect(), { target: { value: "USD" } });
+    await waitForOnlyCurrency("USD", 5);
+
+    fireEvent.click(queryClearButton()!);
+
+    expect(getCurrencySelect()).toHaveValue("");
+    await waitFor(() => expect(new Set(getCurrencyColumn()).size).toBeGreaterThan(1));
+    expect(queryClearButton()).not.toBeInTheDocument();
+  });
+
+  test("shows payment not found when the search and currency have no match", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getInput(), { target: { value: "pay_134" } });
+    fireEvent.click(getSearchButton());
+    await waitForRows(6);
+
+    fireEvent.change(getCurrencySelect(), { target: { value: "ZAR" } });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(I18N.PAYMENT_NOT_FOUND);
   });
 });

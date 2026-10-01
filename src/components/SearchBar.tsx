@@ -1,10 +1,13 @@
 import { useRef, type FormEvent } from "react";
 import { I18N } from "../constants/i18n";
 import { ClearButton, FilterRow, SearchButton, SearchInput } from "./components";
+import { CurrencySelect } from "./CurrencySelect";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  currency: string;
+  onCurrencyChange: (currency: string) => void;
   onSubmit: () => void;
   onClear: () => void;
   showClear: boolean;
@@ -13,6 +16,8 @@ interface SearchBarProps {
 export const SearchBar = ({
   value,
   onChange,
+  currency,
+  onCurrencyChange,
   onSubmit,
   onClear,
   showClear,
@@ -41,6 +46,7 @@ export const SearchBar = ({
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
+        <CurrencySelect value={currency} onChange={onCurrencyChange} />
         <SearchButton type="submit">{I18N.SEARCH_BUTTON}</SearchButton>
         {showClear && (
           <ClearButton type="button" onClick={handleClear}>

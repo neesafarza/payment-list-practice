@@ -4,6 +4,7 @@ import type { PaymentSearchResponse } from "../types/payment";
 
 export interface PaymentSearchParams {
   search?: string;
+  currency?: string;
   page: number;
   pageSize: number;
 }
