@@ -3,10 +3,11 @@ import { I18N } from "../constants/i18n";
 import { usePayments } from "../hooks/usePayments";
 import { getPaymentsErrorMessage } from "../utils/errorMessage";
 import { Container, ErrorBox, Spinner, Title } from "./components";
+import { Pagination } from "./Pagination";
 import { PaymentsTable } from "./PaymentsTable";
 import { SearchBar } from "./SearchBar";
 
-const PAGE = 1;
+const FIRST_PAGE = 1;
 const PAGE_SIZE = 5;
 
 export const PaymentsPage = () => {
@@ -15,11 +16,12 @@ export const PaymentsPage = () => {
   const [appliedSearch, setAppliedSearch] = useState("");
   // Currency applies as soon as it is selected; there is no draft value.
   const [currency, setCurrency] = useState("");
+  const [page, setPage] = useState(FIRST_PAGE);
 
   const query = usePayments({
     search: appliedSearch || undefined,
     currency: currency || undefined,
-    page: PAGE,
+    page,
     pageSize: PAGE_SIZE,
   });
 
@@ -32,15 +34,26 @@ export const PaymentsPage = () => {
       return;
     }
     setAppliedSearch(term);
+    setPage(FIRST_PAGE);
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    setCurrency(value);
+    setPage(FIRST_PAGE);
   };
 
   const handleClear = () => {
     setSearchInput("");
     setAppliedSearch("");
     setCurrency("");
+    setPage(FIRST_PAGE);
   };
 
   const hasActiveFilter = searchInput !== "" || appliedSearch !== "" || currency !== "";
+
+  const totalPages = query.data ? Math.ceil(query.data.total / query.data.pageSize) : 0;
+  // While placeholder data is showing, the real total for this page is unknown.
+  const canGoForward = !query.isPlaceholderData && page < totalPages;
 
   return (
     <Container>
@@ -49,7 +62,7 @@ export const PaymentsPage = () => {
         value={searchInput}
         onChange={setSearchInput}
         currency={currency}
-        onCurrencyChange={setCurrency}
+        onCurrencyChange={handleCurrencyChange}
         onSubmit={handleSearch}
         onClear={handleClear}
         showClear={hasActiveFilter}
@@ -58,7 +71,20 @@ export const PaymentsPage = () => {
       {query.isError && (
         <ErrorBox role="alert">{getPaymentsErrorMessage(query.error)}</ErrorBox>
       )}
-      {query.isSuccess && <PaymentsTable payments={query.data.payments} />}
+      {query.isSuccess && (
+        <PaymentsTable
+          payments={query.data.payments}
+          footer={
+            <Pagination
+              page={page}
+              canGoBack={page > FIRST_PAGE}
+              canGoForward={canGoForward}
+              onPrevious={() => setPage((current) => current - 1)}
+              onNext={() => setPage((current) => current + 1)}
+            />
+          }
+        />
+      )}
     </Container>
   );
 };

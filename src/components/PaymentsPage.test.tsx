@@ -272,3 +272,107 @@ describe("PaymentsPage currency filter", () => {
     expect(alert).toHaveTextContent(I18N.PAYMENT_NOT_FOUND);
   });
 });
+
+const getPreviousButton = () => screen.getByRole("button", { name: I18N.PREVIOUS_BUTTON });
+const getNextButton = () => screen.getByRole("button", { name: I18N.NEXT_BUTTON });
+const pageLabel = (page: number) => `${I18N.PAGE_LABEL} ${page}`;
+
+// Page 1 of the unfiltered list starts with pay_134_1, page 2 with pay_456_1.
+const goToPageTwo = async () => {
+  fireEvent.click(getNextButton());
+  await screen.findByText("pay_456_1");
+};
+
+describe("PaymentsPage pagination", () => {
+  test("starts on page 1 with Previous disabled and Next enabled", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    expect(screen.getByText(pageLabel(1))).toBeInTheDocument();
+    expect(getPreviousButton()).toBeDisabled();
+    expect(getNextButton()).toBeEnabled();
+  });
+
+  test("Next shows the following page and enables Previous", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    await goToPageTwo();
+
+    expect(screen.getByText(pageLabel(2))).toBeInTheDocument();
+    expect(screen.queryByText("pay_134_1")).not.toBeInTheDocument();
+    expect(getPreviousButton()).toBeEnabled();
+  });
+
+  test("Previous returns to the earlier page", async () => {
+    renderPage();
+    await waitForRows(6);
+    await goToPageTwo();
+
+    fireEvent.click(getPreviousButton());
+
+    await screen.findByText("pay_134_1");
+    expect(screen.getByText(pageLabel(1))).toBeInTheDocument();
+    expect(getPreviousButton()).toBeDisabled();
+  });
+
+  test("keeps the current rows visible while the next page loads", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.click(getNextButton());
+
+    expect(screen.getByText("pay_134_1")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await screen.findByText("pay_456_1");
+  });
+
+  test("disables Next on the last page", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    // CZK has a single payment, so its results fit on one page.
+    fireEvent.change(getCurrencySelect(), { target: { value: "CZK" } });
+
+    await waitForRows(2);
+    expect(getNextButton()).toBeDisabled();
+    expect(getPreviousButton()).toBeDisabled();
+  });
+
+  test("a new search returns to page 1", async () => {
+    renderPage();
+    await waitForRows(6);
+    await goToPageTwo();
+
+    fireEvent.change(getInput(), { target: { value: "pay_205" } });
+    fireEvent.click(getSearchButton());
+
+    await screen.findByText("pay_205_1");
+    expect(screen.getByText(pageLabel(1))).toBeInTheDocument();
+  });
+
+  test("changing the currency returns to page 1", async () => {
+    renderPage();
+    await waitForRows(6);
+    await goToPageTwo();
+
+    fireEvent.change(getCurrencySelect(), { target: { value: "USD" } });
+
+    await waitForOnlyCurrency("USD", 5);
+    expect(screen.getByText(pageLabel(1))).toBeInTheDocument();
+  });
+
+  test("Clear Filters returns to page 1", async () => {
+    renderPage();
+    await waitForRows(6);
+    fireEvent.change(getCurrencySelect(), { target: { value: "USD" } });
+    await waitForOnlyCurrency("USD", 5);
+    fireEvent.click(getNextButton());
+    await screen.findByText(pageLabel(2));
+
+    fireEvent.click(queryClearButton()!);
+
+    await screen.findByText("pay_134_1");
+    expect(screen.getByText(pageLabel(1))).toBeInTheDocument();
+  });
+});

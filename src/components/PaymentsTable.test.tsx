@@ -55,10 +55,17 @@ describe("PaymentsTable", () => {
     expect(cells[4]).toBe(I18N.EMPTY_CURRENCY);
   });
 
-  test("renders only the header row for an empty list", () => {
+  test("shows the no-payments message instead of a table for an empty list", () => {
     render(<PaymentsTable payments={[]} />);
 
-    expect(screen.getAllByRole("row")).toHaveLength(1);
+    expect(screen.getByText(I18N.NO_PAYMENTS_FOUND)).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  test("renders the footer below the rows", () => {
+    render(<PaymentsTable payments={[payment]} footer={<p>footer content</p>} />);
+
+    expect(screen.getByText("footer content")).toBeInTheDocument();
   });
 
   test("renders one row per payment", () => {
