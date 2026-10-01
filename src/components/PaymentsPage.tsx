@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { I18N } from "../constants/i18n";
 import { usePayments } from "../hooks/usePayments";
+import { getPaymentsErrorMessage } from "../utils/errorMessage";
 import { Container, ErrorBox, Spinner, Title } from "./components";
 import { PaymentsTable } from "./PaymentsTable";
 import { SearchBar } from "./SearchBar";
@@ -48,7 +49,9 @@ export const PaymentsPage = () => {
         showClear={hasActiveFilter}
       />
       {query.isPending && <Spinner role="status" />}
-      {query.isError && <ErrorBox role="alert">{I18N.SOMETHING_WENT_WRONG}</ErrorBox>}
+      {query.isError && (
+        <ErrorBox role="alert">{getPaymentsErrorMessage(query.error)}</ErrorBox>
+      )}
       {query.isSuccess && <PaymentsTable payments={query.data.payments} />}
     </Container>
   );

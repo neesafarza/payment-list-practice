@@ -99,7 +99,7 @@ describe("PaymentsPage search and clear", () => {
     fireEvent.click(getSearchButton());
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(I18N.SOMETHING_WENT_WRONG);
+    expect(alert).toHaveTextContent(I18N.PAYMENT_NOT_FOUND);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(getInput()).toBeInTheDocument();
 
@@ -107,6 +107,28 @@ describe("PaymentsPage search and clear", () => {
 
     await waitForRows(6);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("shows the server error message when the API returns 500", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getInput(), { target: { value: "pay_500" } });
+    fireEvent.click(getSearchButton());
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(I18N.INTERNAL_SERVER_ERROR);
+  });
+
+  test("shows the generic message for any other error status", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    fireEvent.change(getInput(), { target: { value: "401" } });
+    fireEvent.click(getSearchButton());
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(I18N.SOMETHING_WENT_WRONG);
   });
 
   test("retries a failed search when the same term is submitted again", async () => {
