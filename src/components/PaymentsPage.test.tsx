@@ -2,7 +2,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
 import { PaymentsPage } from "./PaymentsPage";
+import { API_URL } from "../constants";
 import { I18N } from "../constants/i18n";
 import { server } from "../mocks/node";
 
@@ -21,6 +23,14 @@ const renderPage = () => {
     </QueryClientProvider>
   );
 };
+
+// Simulates a transient failure: only the next request gets a 500.
+const failNextRequest = () =>
+  server.use(
+    http.get(`*${API_URL}`, () => HttpResponse.json({ message: "boom" }, { status: 500 }), {
+      once: true,
+    })
+  );
 
 const waitForRows = (count: number) =>
   waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(count));
@@ -94,6 +104,32 @@ describe("PaymentsPage search and clear", () => {
     expect(getInput()).toBeInTheDocument();
 
     fireEvent.click(queryClearButton()!);
+
+    await waitForRows(6);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("retries a failed search when the same term is submitted again", async () => {
+    renderPage();
+    await waitForRows(6);
+
+    failNextRequest();
+    fireEvent.change(getInput(), { target: { value: "pay_134_1" } });
+    fireEvent.click(getSearchButton());
+    await screen.findByRole("alert");
+
+    fireEvent.click(getSearchButton());
+
+    await waitForRows(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  test("retries a failed initial load when an empty search is submitted", async () => {
+    failNextRequest();
+    renderPage();
+    await screen.findByRole("alert");
+
+    fireEvent.click(getSearchButton());
 
     await waitForRows(6);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();

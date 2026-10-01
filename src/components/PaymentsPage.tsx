@@ -19,7 +19,16 @@ export const PaymentsPage = () => {
     pageSize: PAGE_SIZE,
   });
 
-  const handleSearch = () => setAppliedSearch(searchInput.trim());
+  const handleSearch = () => {
+    const term = searchInput.trim();
+    // An unchanged term leaves the query key as it was, so a failed request
+    // would never be retried; refetch it explicitly.
+    if (term === appliedSearch && query.isError) {
+      query.refetch();
+      return;
+    }
+    setAppliedSearch(term);
+  };
 
   const handleClear = () => {
     setSearchInput("");
