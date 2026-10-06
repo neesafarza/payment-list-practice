@@ -1,3 +1,59 @@
+# Payment Search: My Solution
+
+My solution to the payment search challenge. All 8 steps are done, and the original brief is [further down](#-payment-search-challenge).
+
+## Running it
+
+```bash
+npm install
+npm run dev      # start the app with the mock API
+npm test         # run the full test suite (57 tests)
+npm run build    # type-check and production build
+```
+
+## What's implemented
+
+- [x] **Step 1:** Payments table, showing amounts and dates in the expected format
+- [x] **Step 2:** Search by payment ID
+- [x] **Step 3:** Clear filters (focus stays in the search form)
+- [x] **Step 4:** "Payment not found" message for a 404
+- [x] **Step 5:** "Internal server error" message for 5xx responses
+- [x] **Step 6:** Currency filter
+- [x] **Step 7:** Currency and payment ID filters combined
+- [x] **Step 8:** Pagination
+
+## Approach
+
+**Data fetching.** I used **React Query** with **axios**:
+
+- `fetchPayments` (`src/api/payments.ts`) is a plain async function that takes a single `PaymentSearchParams` object. Each feature only added a field to that object (search, then currency, then page), so the fetching code never needed to change.
+- `usePayments` puts those params in the query key, so any filter or page change triggers a new request and caches the result. `keepPreviousData` keeps the current rows on screen while the next page loads.
+
+**Components.** `PaymentsPage` holds all the filter and page state. `SearchBar`, `CurrencySelect`, `PaymentsTable` and `Pagination` are presentational components that just take props.
+
+**Search state.** The search box has two values: what you've typed (`searchInput`) and what was last submitted (`appliedSearch`). Typing doesn't fetch anything until you press Search. Currency applies as soon as you pick one, and any filter change resets to page 1.
+
+**Errors.** `getPaymentsErrorMessage` maps the axios error status to the right i18n message: 404 → not found, 5xx → server error, anything else → a generic message. It's a pure function, so it's unit-tested on its own.
+
+**Styling.** I used styled-components for the page, in `src/components/components.tsx`.
+
+## Decisions and trade-offs
+
+- **Native `<select>` for currency.** It's accessible by default (keyboard, screen readers, a `combobox` role) and needs no extra library.
+- **Currency list from `CURRENCIES`.** The README lists 6 currencies but `src/constants` has 8. I treated the constant as the source of truth.
+- **Retrying the same search.** Resubmitting an unchanged term doesn't change the query key, so React Query wouldn't refetch. If the last request failed, I call `refetch()` explicitly so the user can retry.
+- **Next button while loading.** "Next" is disabled while placeholder data is showing, because the real total for the new page isn't known yet.
+- **Focus on Clear.** The Clear button disappears once it's clicked, so I move focus back to the search input instead of losing it.
+
+## With more time
+
+- Keep the filters and page in the URL, so a search can be shared and the back button works.
+- Show the total number of pages or results next to the pagination.
+- Debounce the search input so results update as you type.
+- Add an end-to-end test (e.g. Playwright) against the running app.
+
+---
+
 # 💳 Payment Search Challenge
 
 Welcome to the Payment Search Challenge! This is a frontend coding challenge designed to assess your ability to implement a payment search feature using modern web technologies.
